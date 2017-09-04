@@ -25,8 +25,8 @@ Currently, in standard library, the following types are influenced:
 -BufReader: Implements ReadLn
 -BufRead: Derived from ReadLn
 -BufWriter: Implements WriteLn
--StdIn: Implements ReadLn
--StdOut: Implements WriteLn
+-Stdin: Implements ReadLn
+-Stdout: Implements WriteLn
 
 ## Const `LINEBREAK`
 
@@ -50,7 +50,7 @@ pub trait ReadLn : Read {
 }
 ```
 
-Implementing the trait indicates the reader can read per-line. Implementations themselves decide what char(s) or char sequence(s) should be recognized as raw linebreak. All types possessing per-line reading functionality should implement `ReadLn`. All `read_line()` and `lines()` should be deprecated.
+Implementing the trait indicates the reader can read per-line. Implementations themselves decide what char(s) or char sequence(s) should be recognized as raw linebreak. All types possessing per-line reading functionality should implement `ReadLn`. All `read_line()` and `lines()` should be deprecated. Default behavior can be defined to reduce users' workloads.
 
 Method `read_ln()` behaves similarly to descried in [document of `std::io::BufRead::read_line()`](https://doc.rust-lang.org/std/io/trait.BufRead.html#method.read_line), except for that linebreaks are not copied to `buf` while included in returned value.
 
@@ -67,7 +67,7 @@ pub trait WriteLn : Write {
 }
 ```
 
-Implementing the trait indicates the writer can write per-line. Implementations themselves decide what char(s) or char sequence(s) should be recognized as raw linebreak. All types possessing per-line reading functionality should implement `WriteLn`.
+Implementing the trait indicates the writer can write per-line. Implementations themselves decide what char(s) or char sequence(s) should be recognized as raw linebreak. All types possessing per-line reading functionality should implement `WriteLn`. Default behavior can be defined to reduce users' workloads.
 
 Method `linebreak()` and `set_linebreak()` allow users to get or set current linebreak. If the linebreak to be used depends on its platform, `std::env::consts::LINEBREAK` can be passed in. `set_linebreak()` returns `Ok()` if the given linebreak is accepted and will be used by following calls to `write_ln()`.
 
@@ -108,13 +108,19 @@ Struct `OpenOption` possesses no method called `text()`. Trait `Read` and `Write
 
 **Why not call it `read_line()`?**
 
-The name `read_ln` is given for compatibility. Method `read_line()` has been defined by two different things: `BufRead` and `StdIn`. `BufRead` is a trait and its `read_line()` borrows as mutable, while `StdIn` is a struct and borrows.
+The name `read_ln` is given for compatibility. Method `read_line()` has been defined by two different things: `BufRead` and `Stdin`. `BufRead` is a trait and its `read_line()` borrows as mutable, while `Stdin` is a struct and borrows as immutable.
 
 **Why does `read_ln()` have different behavior from `read_line`?**
 
-First, `read_ln()` will not copy the linebreak chars. `lines()` omits linebreaks, `write_ln()` does not need `buf` to contain linebreaks neither. So `read_ln()` should not copy linebreaks.
+`read_ln()` will not copy the linebreak chars. `lines()` omits linebreaks, `write_ln()` does not need `buf` to contain linebreaks neither. So `read_ln()` should not copy linebreaks.
 
-Second, the value returned is nolonger the number of bytes read. Since per-line reading is entirely based on text, the number of bytes read can be ignored.
+**Why is `writeln()` useful?**
+
+Writing using `writeln!()` involves string concatenation, which will lead to unnecessary re-allocations and copies. Use method `write_ln()` instead allows further optimization.
+
+**Can we stack up `LineWriter` and `BufWriter`?**
+
+It's considered that we can adjust `LineWriter` only and connect it with `BufWriter` to print per-line. The problem is, it involves extra memory allocations and copies. It's not efficient.
 
 **Why are past proposals disapproved?**
 
@@ -155,12 +161,12 @@ Further optimization could be done, while the behavior of `break_lines_with()` s
 Disapproved for poor practicality. Texts in a program are usually stored in fragments and are concatenated together when needed. Most of its practical use can be replaced by the following codes based on the current proposal:
 
 ```rust
-io::stdout().write(text.break_lines_with(Linebreak::Lf).as_bytes());
+io::Stdout().write(text.break_lines_with(Linebreak::Lf).as_bytes());
 
 // equals to
 
 for line in text.lines() {
-    io::stdout().write_ln(line);
+    io::Stdout().write_ln(line);
 }
 ```
 
