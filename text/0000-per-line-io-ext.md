@@ -114,7 +114,7 @@ The name `read_ln` is given for compatibility. Method `read_line()` has been def
 
 `read_ln()` will not copy the linebreak chars. `lines()` omits linebreaks, `write_ln()` does not need `buf` to contain linebreaks neither. So `read_ln()` should not copy linebreaks.
 
-**Why is `writeln()` useful?**
+**Why is `write_ln()` useful?**
 
 Writing using `writeln!()` involves string concatenation, which will lead to unnecessary re-allocations and copies. Use method `write_ln()` instead allows further optimization.
 
@@ -173,5 +173,6 @@ for line in text.lines() {
 # Unresolved questions
 [unresolved]: #unresolved-questions
 
+- Should `read_ln()` retain its name before, `read_line()`? Since the adjustment is probably already incompatible with previous `std::io`.
 - How to resolve the name collision between new and old `lines()`?
 - Should `ReadLn` and `WriteLn` allow users to specify what char(s) or char sequence(s) are recognized as raw linebreaks?
